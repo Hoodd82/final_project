@@ -1,0 +1,50 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+
+airlines <- read_csv("raw_data/airlines.csv")
+airports <- read_csv("raw_data/airports.csv")
+flights <- read_csv("raw_data/flights.csv")
+places <- read_csv("raw_data/planes.csv")
+weather <- read_csv("raw_data/weather.csv")
+```
+
+```{r}
+summary(flights)
+
+colnames(flights)
+```
+
+This crowdedness causes increasingly frequent delays in most major airports worldwide
+
+The results show that adverse weather conditions, low ceilings, and low visibility conditions strongly influence flight delay
+
+- Are longer flights more likely to be delayed or not?
+
+
+- which airports are most susceptible to delays? 
+- what is there geographical location?
+- which is the busiest airport? time diff between landings
+- A movement is a landing or takeoff of an aircraft.
+
+- which routes are the most affected?
+- which are the best routes?
+
+- Only consider commercial airlines
+
+- classify the weather dataset
+- what conditions are worst for pilots?
+- when is best to travel?
+
+
+- which carriers are most susceptible to delays? 
+- what does there fleet look like?
+- domestic or international?
+- which airplanes are most susceptible to delays?
+
+
+- what weather leads to be most delays?
