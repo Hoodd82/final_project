@@ -1,122 +1,17 @@
----
-title: "R Notebook"
-output: html_notebook
----
 
 ```{r}
-# load in required libraries
-library(tidyverse)
-```
+flights_test <- flights %>% 
+  drop_na() %>% # drop NAs since these observations will not be useful in the analysis
+  mutate(depart_date = str_c(year, month, day, sep = "-")) %>%
+  mutate(across(.cols = c(dep_time, sched_dep_time, arr_time, sched_arr_time), 
+                .fns = ~ str_pad(.x, width = 4, pad = 0))) %>% # convert the time variables to hhmm
+  mutate(across(.cols = c(dep_time, sched_dep_time, arr_time, sched_arr_time), 
+                .fns = ~ str_replace(.x, "^(..)", "\\1:"))) %>%
+  mutate(sched_depart_datetime = ymd_hm(paste(depart_date, sched_dep_time))) %>%
+  mutate(act_depart_datetime = sched_depart_datetime + dep_delay * 60) %>%
+  relocate(sched_depart_datetime, act_depart_datetime)
 
-```{r}
-# load in raw datasets
-airlines <- read_csv("raw_data/airlines.csv")
-airports <- read_csv("raw_data/airports.csv")
-flights <- read_csv("raw_data/flights.csv")
-planes <- read_csv("raw_data/planes.csv")
-weather <- read_csv("raw_data/weather.csv")
-```
 
-# Initial Data Exploration
-
-Use summary to perform an initial exploration of the datasets, noting where there are large numbers of NA values. Variable types will be addressed once we have a cleaned, combined dataset.
-
-```{r}
-# explore the data
-summary(airlines)
-summary(airports)
-summary(planes)
-summary(weather)
-summary(flights)
-```
-
-# Initial Data Cleaning
-
-There are a large number of missing values in the weather and flights dataset. The proportion of the dataset with missing values is calcualted below.
-
-```{r}
-# calculate proportion of the data which are NAs
-weather %>% 
-  summarise_each(funs(100 * mean(is.na(.))))
-
-flights %>% 
-  summarise_each(funs(100 * mean(is.na(.))))
-```
-
-The proportion of NAs in the flights dataset is less than 3% and therefore of little concern, however as the NAs are in columns that I will be using in the analysis, I can drop these from the dataset.
-
-```{r}
-# drop NAs from flight data since these observations won't be useful in the analysis
-flights <- flights %>% 
-  drop_na()
-```
-
-There are variables in the weather dataset which have a proportion of missing values greater than 90%, there is little value in keeping these variables in the data and therefore they can be dropped.
-
-```{r}
-# drop variables where proportion of NAs is greater than 90%
-weather <- weather %>% 
-  select(-c(temp, dewp, humid, precip, pressure))
-```
-
-I have chosen to drop three columns from the airports dataset - I don't foresee these variables being of much consequence to the analysis.
-
-```{r}
-airports <- airports %>% 
-  select(-c(tz, dst, tzone))
-```
-
-# Joining the Datasets
-
-The flights dataset can be joined to the airlines, planes and airports datasets (the join is repeated for the airport dataset so we have corresponding information for both the origin and destination airports)
-
-```{r}
-# join flights dataset with airlines, planes and airport datasets
-flights_joined <- flights %>% 
-  left_join(airlines, by = "carrier") %>% 
-  left_join(planes, by = "tailnum") %>% 
-  left_join(airports, by = c("origin" = "faa")) %>% 
-  left_join(airports, by = c("dest" = "faa"))
-flights_joined
-```
-
-```{r}
-ewr_flights <- flights_joined %>% 
-  filter(origin == "EWR")
-jfk_flights <- flights_joined %>% 
-  filter(origin == "JFK")
-lga_flights <- flights_joined %>% 
-  filter(origin == "LGA")
-```
-
-```{r}
-ewr_weather <- weather %>% 
-  filter(origin == "EWR")
-jfk_weather <- weather %>% 
-  filter(origin == "JFK")
-lga_weather <- weather %>% 
-  filter(origin == "LGA")
-```
-
-```{r}
-ewr_flights_joined <- ewr_flights %>% 
-  left_join(ewr_weather, by = "time_hour")
-ewr_flights_joined
-```
-
-```{r}
-jfk_flights_joined <- jfk_flights %>% 
-  left_join(jfk_weather, by = "time_hour")
-jfk_flights_joined
-```
-
-```{r}
-lga_flights_joined <- lga_flights %>% 
-  left_join(lga_weather, by = "time_hour")
-lga_flights_joined
-```
-
-```{r}
-flights_joined <- bind_rows(ewr_flights_joined, jfk_flights_joined, lga_flights_joined)
+flights_test
 ```
 
