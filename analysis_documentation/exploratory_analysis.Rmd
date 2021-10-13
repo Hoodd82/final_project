@@ -1,0 +1,86 @@
+---
+title: "Flights Exploratory Analysis"
+output: html_notebook
+---
+
+The purpose of exploratory analysis is to perform initial investigations on the data so as to discover patterns, identify any anomalies, to test initial hypothesis and check assumptions made at the start of the project. 
+
+In this section of the project we will ask two types of questions: 
+
+1. what type of variation occurs within my variables? 
+2. what type of covariation occurs between my variables? 
+
+Variation being the tendency for values of a variable to change from measurement to measurement, and covariance is the tendency for two or more variables to vary together in a related way.
+
+```{r, warning=FALSE,message=FALSE}
+pacman::p_load(
+  tidyverse,
+  here,
+  RColorBrewer,
+  lubridate,
+  scales
+)
+```
+
+```{r, warning=FALSE,message=FALSE}
+flights_clean <- read_csv(here("clean_data/flights_clean.csv"))
+
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+```
+
+# Which airport in our dataset has the highest number of departures?
+
+```{r}
+flights %>% 
+  group_by(origin) %>%
+  ggplot() +
+  aes(x = origin, fill = origin) +
+  geom_bar() +
+  scale_fill_manual(values = cbPalette) +
+  labs(
+    x = "airport",
+    y = "departure numbers",
+    title = "Departure numbers by airport"
+  ) +
+  guides(fill = FALSE) +
+  theme_bw()
+```
+
+# What is the trend of delays over the year, how does it compare across the three airports?
+
+```{r,warning=FALSE}
+flights %>% 
+  filter(dep_delay > 0) %>% 
+  group_by(month = floor_date(sched_dep_time, "month")) %>% 
+  summarise(mean_delay = mean(dep_delay)) %>% 
+  ggplot() +
+  aes(x = month, y = mean_delay, colour = "red") +
+  geom_line() +
+  labs(
+    x = "month",
+    y = "mean delay (minutes)",
+    title = " Mean delay by month"
+  ) +
+  guides(colour = FALSE) +
+  theme_bw()
+```
+
+# Which carrier has the most departure delays?
+
+
+# Which carrier has the most arrival delays?
+
+
+# Which aircraft has the most delays?
+
+
+# Which aircrafts are in each carriers fleet?
+
+
+# What is the relationship between the recorded weather conditions and departure delays?
+
+
+# Which season has the highest number of departure delays?
+
+
+# Over the course of a day when is the largest average delay?

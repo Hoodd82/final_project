@@ -18,8 +18,7 @@ weather <- read_csv(here("raw_data/weather.csv"))
 # data_cleaning -----------------------------------------------------------
 
 weather <- weather %>% 
-  select(-c(temp, dewp, humid, precip, pressure, 
-            year, month, day, hour)) # drop variables where proportion of NAs is greater than 90%
+  select(-c(year, month, day, hour)) # drop variables which are not required
 
 airports <- airports %>% 
   select(-c(tz, dst, tzone)) # to avoid irregularities due to changes in timezones, New York local time will be the reference
@@ -99,10 +98,10 @@ flights <- flights %>%
   select(-c(origin.y)) %>% # duplicate variable
   rename("flight_number" = "flight", "tail_number" = "tailnum",
          "origin" = "origin.x", "carrier_name" = "name.x", 
-         "dest_name" = "name.y", "visibility" = "visib") %>% 
+         "dest_name" = "name.y", "visibility" = "visib", "humidity" = "humid") %>% 
   relocate(dep_time:dep_delay, origin, origin_name, arr_time:arr_delay, dest, 
            dest_name, air_time, distance, flight_number, carrier, carrier_name,
-           tail_number, manufacturer:aircraft_age, lat:alt, wind_dir:visibility)
+           tail_number, manufacturer:aircraft_age, lat:alt, time_hour, wind_dir:humidity)
 
 # write_to_csv ------------------------------------------------------------
 
