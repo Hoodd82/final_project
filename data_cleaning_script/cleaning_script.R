@@ -33,7 +33,8 @@ datetime_fn <- function(year, month, day, time) {
   make_datetime(year, month, day, time %/% 100, time %% 100)
 } # using modulus arithmetic we can pull the hour and minutes from the departure and arrival variables
 
-flights <- flights %>% 
+flights <- flights %>%
+  distinct(., .keep_all = TRUE) %>% # check for and remove any duplicated rows
   mutate(
     dep_time = datetime_fn(year, month, day, dep_time),
     arr_time = datetime_fn(year, month, day, arr_time),
@@ -85,13 +86,25 @@ flights_weather_join_fn <- function(dataset1, dataset2){
   flights_joined <- bind_rows(
     ewr_flights_joined, jfk_flights_joined, lga_flights_joined)
   # assign the output to flights
-  flights <<- flights
+  flights <<- flights_joined
 }
 
 flights_weather_join_fn(flights, weather)
 
 # final_clean -------------------------------------------------------------
 
-# final round of cleaning on the joined dataset, the focus here is to reorder the data so the information is in a logical order
+# final round of cleaning on the joined dataset, the focus here is to remove any superfluous variables, and to rename and reorder them so the data is in a more logical order
 
-   
+flights <- flights %>%
+  select(-c(origin.y)) %>% # duplicate variable
+  rename("flight_number" = "flight", "tail_number" = "tailnum",
+         "origin" = "origin.x", "carrier_name" = "name.x", 
+         "dest_name" = "name.y", "visibility" = "visib") %>% 
+  relocate(dep_time:dep_delay, origin, origin_name, arr_time:arr_delay, dest, 
+           dest_name, air_time, distance, flight_number, carrier, carrier_name,
+           tail_number, manufacturer:aircraft_age, lat:alt, wind_dir:visibility)
+
+# write_to_csv ------------------------------------------------------------
+
+write_csv(flights, here("clean_data/flights_clean.csv"))
+
