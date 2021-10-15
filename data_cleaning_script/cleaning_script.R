@@ -92,17 +92,15 @@ flights_weather_join_fn(flights, weather)
 
 # final_clean -------------------------------------------------------------
 
-# final round of cleaning on the joined dataset, the focus here is to remove any superfluous variables, and to rename and reorder them so the data is in a more logical order
+# final round of cleaning on the joined dataset
 
 flights <- flights %>%
   select(-c(origin.y)) %>% # duplicate variable
-  rename("flight_number" = "flight", "tail_number" = "tailnum",
-         "origin" = "origin.x", "carrier_name" = "name.x", 
-         "dest_name" = "name.y", "visibility" = "visib", "humidity" = "humid") %>% 
+  rename("origin" = "origin.x", "carrier_name" = "name.x", 
+         "dest_name" = "name.y") %>% 
   relocate(dep_time:dep_delay, origin, origin_name, arr_time:arr_delay, dest, 
-           dest_name, air_time, distance, flight_number, carrier, carrier_name,
-           tail_number, manufacturer:aircraft_age, lat:alt, time_hour, wind_dir:humidity)
-
+           dest_name, air_time, distance, flight, carrier, carrier_name,
+           tailnum, manufacturer:aircraft_age, lat:alt, time_hour, wind_dir:humid)
 # write_to_csv ------------------------------------------------------------
 
 write_csv(flights, here("clean_data/flights_clean.csv"))

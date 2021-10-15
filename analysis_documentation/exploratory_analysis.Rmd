@@ -18,12 +18,15 @@ pacman::p_load(
   here,
   RColorBrewer,
   lubridate,
-  scales
+  scales,
+  GGally,
+  stats,
+  corrplot
 )
 ```
 
 ```{r, warning=FALSE,message=FALSE}
-flights_clean <- read_csv(here("clean_data/flights_clean.csv"))
+flights_dt <- read_csv(here("clean_data/flights_clean.csv"))
 
 cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 ```
@@ -31,7 +34,7 @@ cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
 # Which airport in our dataset has the highest number of departures?
 
 ```{r}
-flights %>% 
+flights_dt %>% 
   group_by(origin) %>%
   ggplot() +
   aes(x = origin, fill = origin) +
@@ -42,45 +45,337 @@ flights %>%
     y = "departure numbers",
     title = "Departure numbers by airport"
   ) +
-  guides(fill = FALSE) +
+  guides(fill = "none") +
   theme_bw()
 ```
 
 # What is the trend of delays over the year, how does it compare across the three airports?
 
 ```{r,warning=FALSE}
-flights %>% 
+flights_dt %>% 
   filter(dep_delay > 0) %>% 
-  group_by(month = floor_date(sched_dep_time, "month")) %>% 
-  summarise(mean_delay = mean(dep_delay)) %>% 
+  group_by(month = floor_date(sched_dep_time, "month"), origin) %>% 
+  summarise(mean_delay = mean(dep_delay), .groups = "drop") %>% 
   ggplot() +
-  aes(x = month, y = mean_delay, colour = "red") +
-  geom_line() +
+  aes(x = month, y = mean_delay, colour = origin) +
+  geom_line(alpha = 0.6) +
+  geom_point(alpha = 0.8) +
   labs(
     x = "month",
     y = "mean delay (minutes)",
-    title = " Mean delay by month"
+    title = " Mean delay by month",
+    colour = "airport"
   ) +
-  guides(colour = FALSE) +
+  scale_colour_manual(values = c("#999999", "#E69F00", "#56B4E9")) +
+  theme_bw()
+```
+
+# What is the number of departure delays over the year?
+
+```{r}
+flights_dt %>%
+  filter(dep_delay > 0) %>% 
+  group_by(month = floor_date(sched_dep_time, "month"), origin) %>% 
+  summarise(no_of_delays = n(), .groups = "drop") %>% 
+  ggplot() +
+  aes(x = month, y = no_of_delays, colour = origin) +
+  geom_line(alpha = 0.6) +
+  geom_point(alpha = 0.8) +
+  labs(
+    x = "month",
+    y = "number of delays",
+    title = " Monthly trend of departure delays",
+    colour = "airport"
+  ) +
+  scale_colour_manual(values = c("#999999", "#E69F00", "#56B4E9")) +
+  theme_bw()
+```
+
+# What is the number of flights per month?
+
+```{r}
+flights_dt %>%
+  group_by(month = floor_date(sched_dep_time, "month"), origin) %>% 
+  summarise(no_of_flights = n(), .groups = "drop") %>% 
+  ggplot() +
+  aes(x = month, y = no_of_flights, fill = origin) +
+  geom_col(position = "dodge", alpha = 0.8) +
+  labs(
+    x = "month",
+    y = "number of departures",
+    title = "Departure numbers by month",
+    fill = "airport"
+  ) +
+  scale_fill_manual(values = cbPalette) +
   theme_bw()
 ```
 
 # Which carrier has the most departure delays?
 
+```{r}
+flights_dt %>% 
+  filter(dep_delay > 0) %>% 
+  group_by(carrier_name, origin) %>% 
+  summarise(mean_delay = mean(dep_delay), .groups = "drop") %>% 
+  ggplot() +
+  aes(x = reorder(carrier_name, mean_delay), y = mean_delay, fill = origin) +
+  geom_col(alpha = 0.8) +
+  facet_wrap(~ origin) +
+  labs(
+    x = "carrier",
+    y = "mean delay (minutes)",
+    title = "Mean departure delay by carrier",
+    fill = "airport"
+  ) +
+  theme_bw() +
+  scale_fill_manual(values=c("#999999", "#E69F00", "#56B4E9")) +
+  theme(axis.text.x = element_text(angle = 0, vjust = 0.5, hjust = 1)) +
+  coord_flip()
+```
 
 # Which carrier has the most arrival delays?
 
+```{r}
+flights_dt %>% 
+  filter(arr_delay > 0) %>% 
+  group_by(carrier_name, origin) %>% 
+  summarise(mean_delay = mean(arr_delay), .groups = "drop") %>% 
+  ggplot() +
+  aes(x = reorder(carrier_name, mean_delay), y = mean_delay, fill = origin) +
+  geom_col(alpha = 0.8) +
+  facet_wrap(~ origin) +
+  labs(
+    x = "carrier",
+    y = "mean delay (minutes)",
+    title = "Mean arrival delay by carrier",
+    fill = "airport"
+  ) +
+  theme_bw() +
+  scale_fill_manual(values=c("#999999", "#E69F00", "#56B4E9")) +
+  theme(axis.text.x = element_text(angle = 0, vjust = 0.5, hjust = 1)) +
+  coord_flip()
+```
 
 # Which aircraft has the most delays?
 
+```{r}
+
+```
 
 # Which aircrafts are in each carriers fleet?
 
+```{r}
 
-# What is the relationship between the recorded weather conditions and departure delays?
-
+```
 
 # Which season has the highest number of departure delays?
 
+```{r}
+
+```
 
 # Over the course of a day when is the largest average delay?
+
+```{r}
+
+```
+
+# Which destinations suffer from the longest delays?
+
+```{r}
+
+```
+
+# Trend weather conditions against mean departure delays
+
+```{r}
+flights_dt %>% 
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  group_by(month = floor_date(sched_dep_time, "day"), origin) %>% 
+  summarise(mean_visibility = mean(visib, na.rm = TRUE),
+            mean_delay = mean(dep_delay), .groups = "drop") %>% 
+  ggplot() +
+  aes(x = mean_visibility, y = mean_delay) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    x = "mean visibility (miles)",
+    y = "mean departure delay (minutes)",
+    title = "Mean departure delay by visibility"
+  ) +
+  theme_bw()
+```
+
+```{r}
+flights_dt %>% 
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  group_by(day = floor_date(sched_dep_time, "day"), origin) %>% 
+  summarise(mean_wind_speed = mean(wind_speed, na.rm = TRUE),
+            mean_delay = mean(dep_delay)) %>% 
+  ggplot() +
+  aes(x = mean_wind_speed, y = mean_delay) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    x = "mean wind speed (mph)",
+    y = "mean departure delay (minutes)",
+    title = "Mean departure delay by wind speed"
+  ) +
+  theme_bw()
+```
+
+```{r}
+flights_dt %>% 
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  group_by(day = floor_date(sched_dep_time, "day"), origin) %>% 
+  summarise(mean_wind_gust = mean(wind_gust, na.rm = TRUE),
+            mean_delay = mean(dep_delay)) %>% 
+  ggplot() +
+  aes(x = mean_wind_gust, y = mean_delay) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    x = "mean wind gust (mph)",
+    y = "mean departure delay (minutes)",
+    title = "Mean departure delay by wind gust"
+  ) +
+  theme_bw()
+```
+
+```{r}
+flights_dt %>% 
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  group_by(day = floor_date(sched_dep_time, "day"), origin) %>% 
+  summarise(mean_wind_dir = mean(wind_dir, na.rm = TRUE),
+            mean_delay = mean(dep_delay)) %>% 
+  ggplot() +
+  aes(x = mean_wind_dir, y = mean_delay) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    x = "mean wind direction (degrees)",
+    y = "mean departure delay (minutes)",
+    title = "Mean departure delay by wind direction"
+  ) +
+  theme_bw()
+```
+
+```{r}
+flights_dt %>%
+  filter(!is.na(humid),
+         dep_delay > 0 & origin == "EWR") %>% 
+  group_by(day = floor_date(sched_dep_time, "day"), origin) %>% 
+  summarise(mean_humidity = mean(humid, na.rm = TRUE),
+            mean_delay = mean(dep_delay)) %>% 
+  ggplot() +
+  aes(x = mean_humidity, y = mean_delay) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    x = "mean humidity (%)",
+    y = "mean departure delay (minutes)",
+    title = "Mean departure delay by humidity"
+  ) +
+  theme_bw()
+```
+
+```{r}
+flights_dt %>% 
+  filter(!is.na(temp),
+         dep_delay > 0 & origin == "EWR") %>% 
+  group_by(day = floor_date(sched_dep_time, "day"), origin) %>% 
+  summarise(mean_temp = mean(temp, na.rm = TRUE),
+            mean_delay = mean(dep_delay)) %>% 
+  ggplot() +
+  aes(x = mean_temp, y = mean_delay) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    x = "mean temperature (degf)",
+    y = "mean departure delay (minutes)",
+    title = "Mean departure delay by temperature"
+  ) +
+  theme_bw()
+```
+
+```{r}
+flights_dt %>% 
+  filter(!is.na(dewp),
+         dep_delay > 0 & origin == "EWR") %>% 
+  group_by(day = floor_date(sched_dep_time, "day"), origin) %>% 
+  summarise(mean_dewpoint = mean(dewp, na.rm = TRUE),
+            mean_delay = mean(dep_delay)) %>% 
+  ggplot() +
+  aes(x = mean_dewpoint, y = mean_delay) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    x = "mean dewpoint (degF)",
+    y = "mean departure delay (minutes)",
+    title = "Mean departure delay by dewpoint"
+  ) +
+  theme_bw()
+```
+
+```{r}
+flights_dt %>% 
+  filter(!is.na(precip),
+         dep_delay > 0 & origin == "EWR") %>% 
+  group_by(day = floor_date(sched_dep_time, "day"), origin) %>% 
+  summarise(mean_precip = mean(precip, na.rm = TRUE),
+            mean_delay = mean(dep_delay)) %>% 
+  ggplot() +
+  aes(x = mean_precip, y = mean_delay) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    x = "mean precipitation (inches)",
+    y = "mean departure delay (minutes)",
+    title = "Mean departure delay by precipitation"
+  ) +
+  theme_bw()
+```
+
+```{r}
+flights_dt %>%
+  filter(!is.na(pressure),
+         dep_delay > 0 & origin == "EWR") %>% 
+  group_by(day = floor_date(sched_dep_time, "day"), origin) %>% 
+  summarise(mean_pressure = mean(pressure, na.rm = TRUE),
+            mean_delay = mean(dep_delay)) %>% 
+  ggplot() +
+  aes(x = mean_pressure, y = mean_delay) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    x = "mean pressure (mbar)",
+    y = "mean departure delay (minutes)",
+    title = "Mean departure delay by pressure"
+  ) +
+  theme_bw()
+```
+# Corrpliot
+
+```{r}
+flights_clean <- flights_dt %>% 
+  na.omit() %>% 
+  filter(dep_delay > 0 & origin == "EWR") 
+
+fl <- flights_clean[sapply(flights_clean,is.numeric)]
+
+corrplot(cor(flights_clean), order = "hclust", addrect = 2)
+```
+
+```{r}
+model <- lm(dep_delay ~ ., data = fl)
+
+alias(lm(dep_delay ~ ., data = fl))
+
+summary(model)
+```
+
+```{r}
+model_scale <- lm(dep_delay ~ dewp + temp, data = flights_clean)
+summary(model_scale)
+```
+
