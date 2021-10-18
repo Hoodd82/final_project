@@ -26,7 +26,11 @@ pacman::p_load(
   glmulti,
   broom,
   rpart,
-  rpart.plot
+  rpart.plot,
+  modelr,
+  yardstick,
+  caret,
+  ranger
 )
 ```
 
@@ -438,10 +442,7 @@ model_1_dt <- flights_dt %>%
   na.omit() %>% 
   filter(dep_delay > 0 & origin == "EWR") %>% 
   select(dep_delay, temp, dewp, humid, wind_dir, wind_speed, precip, pressure, visib)
-
 model_1 <- lm(dep_delay ~ ., data = model_1_dt)
-
-# view results 
 summary(model_1)
 ```
 
@@ -450,7 +451,7 @@ model_2_dt <- flights_dt %>%
   filter(dep_delay > 0 & origin == "EWR") %>% 
   na.omit() %>% 
   select_if(., is.numeric) %>% 
-  select(-c(arr_delay, engines, seats, lat, lon, wind_dir, year, temp, precip, minute, distance, visib, flight))
+  select(-c(arr_delay, engines, seats, lat, lon, wind_dir, year, precip, minute, distance, flight))
 
 model_2 <- lm(dep_delay ~ ., data = model_2_dt)
 summary(model_2)
@@ -460,53 +461,48 @@ summary(model_2)
 
 ```{r}
 flights_dt %>%
+  filter(dep_delay > 0 & origin == "EWR") %>% 
   na.omit() %>% 
   ggplot() +
   aes(x = humid, y = dewp) +
-  geom_point() +
-  geom_smooth(method = "lm")
+  geom_point()
 
 flights_dt %>%
+  filter(dep_delay > 0 & origin == "EWR") %>% 
   na.omit() %>% 
   ggplot() +
-  aes(x = humid, y = wind_speed) +
-  geom_point() +
-  geom_smooth(method = "lm")
+  aes(x = temp, y = dewp) +
+  geom_point()
 
 flights_dt %>%
+  filter(dep_delay > 0 & origin == "EWR") %>% 
   na.omit() %>% 
   ggplot() +
-  aes(x = humid, y = pressure) +
-  geom_point() +
-  geom_smooth(method = "lm")
+  aes(x = visib, y = humid) +
+  geom_point()
 
 flights_dt %>%
-  na.omit() %>% 
-  ggplot() +
-  aes(x = dewp, y = wind_speed) +
-  geom_point() +
-  geom_smooth(method = "lm")
-
-flights_dt %>%
+  filter(dep_delay > 0 & origin == "EWR") %>% 
   na.omit() %>% 
   ggplot() +
   aes(x = dewp, y = pressure) +
-  geom_point() +
-  geom_smooth(method = "lm")
+  geom_point()
 
 flights_dt %>%
+  filter(dep_delay > 0 & origin == "EWR") %>% 
   na.omit() %>% 
   ggplot() +
-  aes(x = wind_speed, y = pressure) +
-  geom_point() +
-  geom_smooth(method = "lm")
+  aes(x = humid, y = wind_speed) +
+  geom_point()
 ```
 
 # Linear regression model with interactions in weather variables
 
 ```{r}
-model_3 <- lm(dep_delay ~ air_time + aircraft_age + alt + hour + dewp + wind_speed
-              + pressure + dewp:humid + pressure:dewp, data = model_2_dt)
+model_3 <- lm(dep_delay ~ air_time + aircraft_age + alt + hour + dewp +
+              pressure + dewp:humid + pressure:dewp + dewp:temp +  
+              wind_speed:humid, 
+              data = model_2_dt)
 summary(model_3)
 ```
 
@@ -534,14 +530,25 @@ glmulti_fit <- glmulti(
 ```{r}
 flights_decision_tree <- flights_dt %>%
   filter(origin == "EWR") %>% 
-  select(dep_delay, air_time, distance, engines, engine, 
+  select(sched_dep_time, dep_delay, distance, engines, engine, 
          aircraft_age, lat, lon, alt, hour, temp, precip, humid, visib, pressure,
          dewp, wind_dir, wind_speed) %>% 
-  mutate(engines = as.factor(engines),
-         late_departure = ifelse(dep_delay > 0, "Late", "Ontime/Early")) %>% 
-  select(-dep_delay)
+  mutate(engines = factor(engines),
+         engine = factor(engine),
+         month = month(sched_dep_time, label = TRUE),
+         late_departure = as.factor(ifelse(dep_delay > 0, "Late", "Ontime/Early"))) %>%
+  mutate(season = factor(case_when(
+    month %in% c("Dec", "Jan", "Feb") ~ "Winter",
+    month %in% c("Mar", "Apr", "May") ~ "Spring",
+    month %in% c("Jun", "Jul", "Aug") ~ "Summer",
+    month %in% c("Sep", "Oct", "Nov") ~ "Autumn"
+  ))) %>% 
+  select(-c(dep_delay, sched_dep_time)) %>% 
+  na.omit()
 
-set.seed(19)
+str(flights_decision_tree)
+
+# set.seed(19)
 
 n_data <- nrow(flights_decision_tree)
 # create test sample index
@@ -571,9 +578,24 @@ flights_fit <- rpart(
 rpart.plot(flights_fit, 
            yesno = 2, 
            fallen.leaves = TRUE, 
-           faclen = 6, 
-           digits = 4, 
-           type = 4, 
-           extra = 101)
+           faclen = 2, 
+           digits = 4)
+```
+
+```{r}
+flights_test_pred <- flights_test %>%
+  add_predictions(flights_fit, type = 'class')
+
+flights_test_pred
+```
+
+```{r}
+conf_mat <- flights_test_pred %>%
+              conf_mat(truth = late_departure, estimate = pred)
+conf_mat
+```
+
+```{r}
+confusionMatrix(flights_test_pred$pred, flights_test_pred$late_departure)
 ```
 
