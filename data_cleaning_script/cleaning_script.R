@@ -4,16 +4,26 @@ pacman::p_load(
   here,        
   janitor,    
   lubridate,  
-  tidyverse
+  tidyverse,
+  nycflights13
 )
+
+
+# datasets ----------------------------------------------------------------
+
+airports <- airports
+airlines <- airlines
+flights <- flights
+weather <- weather
+aircraft <- planes
 
 # read_in_datasets --------------------------------------------------------
 
-airlines <- read_csv(here("raw_data/airlines.csv"))
-airports <- read_csv(here("raw_data/airports.csv"))
-flights <- read_csv(here("raw_data/flights.csv"))
-aircraft <- read_csv(here("raw_data/planes.csv"))
-weather <- read_csv(here("raw_data/weather.csv"))
+# airlines <- read_csv(here("raw_data/airlines.csv"))
+# airports <- read_csv(here("raw_data/airports.csv"))
+# flights <- read_csv(here("raw_data/flights.csv"))
+# aircraft <- read_csv(here("raw_data/planes.csv"))
+# weather <- read_csv(here("raw_data/weather.csv"))
 
 # data_cleaning -----------------------------------------------------------
 
@@ -25,9 +35,8 @@ airports <- airports %>%
 
 aircraft <- aircraft %>%
   mutate(year = na_if(year, 0)) %>% # avoid issues with aircraft with year equal zero
-  mutate(aircraft_age = as.numeric(format(Sys.Date(), "%Y")) - year) %>% # create aircraft age variable
-  select(-c(engines, speed, year, type, engine)) # drop variables which will not be used in the final analysis
-
+  mutate(aircraft_age = as.numeric(format(Sys.Date(), "%Y")) - year) # create aircraft age variable
+  
 datetime_fn <- function(year, month, day, time) {
   make_datetime(year, month, day, time %/% 100, time %% 100)
 } # using modulus arithmetic we can pull the hour and minutes from the departure and arrival variables
@@ -46,7 +55,7 @@ flights <- flights %>%
     origin == "JFK" ~ "John F. Kennedy Int. Airport",
     origin == "LGA" ~ "LaGuardia Airport"
   ), .after = "origin") %>% # create origin_name for airport names, easier to do this rather than performing an additional join
-  select(-c(year, month, day, hour, minute))  # drop variables which are no longer required
+  select(-c(year, month, day))  # drop variables which are not required
 
 # first_join --------------------------------------------------------------
 
@@ -92,10 +101,13 @@ flights_weather_join_fn(flights, weather)
 
 # final_clean -------------------------------------------------------------
 
+# calculate percentage of missing data and drop these variables
+map(flights, ~mean(is.na(.)))
+
 # final round of cleaning on the joined dataset
 
 flights <- flights %>%
-  select(-c(origin.y)) %>% # duplicate variable
+  select(-c(origin.y, wind_gust, speed)) %>% # drop duplicates & variables with lots of missing data
   rename("origin" = "origin.x", "carrier_name" = "name.x", 
          "dest_name" = "name.y") %>% 
   relocate(dep_time:dep_delay, origin, origin_name, arr_time:arr_delay, dest, 

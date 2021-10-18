@@ -21,7 +21,10 @@ pacman::p_load(
   scales,
   GGally,
   stats,
-  corrplot
+  corrplot,
+  leaps,
+  glmulti,
+  broom
 )
 ```
 
@@ -156,34 +159,86 @@ flights_dt %>%
   coord_flip()
 ```
 
-# Which aircraft has the most delays?
-
-```{r}
-
-```
-
-# Which aircrafts are in each carriers fleet?
-
-```{r}
-
-```
-
 # Which season has the highest number of departure delays?
 
 ```{r}
-
+flights_dt %>% 
+  filter(dep_delay > 0) %>% 
+  group_by(day = floor_date(sched_dep_time, "day"), origin) %>% 
+  summarise(mean_delay = mean(dep_delay, na.rm = TRUE), .groups = "drop") %>% 
+  ggplot() +
+  aes(x = day, y = mean_delay, colour = origin) +
+  geom_point(alpha = 0.8) +
+  labs(
+    x = "date",
+    y = "mean delay (minutes)",
+    title = "Mean departure delay by month"
+  ) +
+  scale_colour_manual(values = c("#999999", "#E69F00", "#56B4E9")) +
+  theme_bw()
 ```
 
 # Over the course of a day when is the largest average delay?
 
 ```{r}
+flights_dt %>% 
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  select(dep_delay, hour) %>%
+  group_by(hour) %>% 
+  summarise(mean_delay = mean(dep_delay, na.rm = TRUE), .groups = "drop") %>% 
+  ggplot() +
+  aes(x = hour, y = mean_delay) +
+  geom_point(alpha = 0.8) +
+  geom_smooth(se = FALSE) +
+  labs(
+    x = "hour",
+    y = "mean delay (minutes)",
+    title = "Mean departure delay by departure time"
+  ) +
+  theme_bw() +
+  scale_x_continuous(limits = c(5, 23), breaks = seq(5, 23, by = 1))
+```
+# Which are the most popular destinations from Newark Int?
 
+```{r}
+flights_dt %>% 
+  filter(origin == "EWR") %>% 
+  group_by(dest, dest_name) %>% 
+  summarise(count = n(), .groups = "drop") %>% 
+  arrange(desc(count)) %>% 
+  head(10) %>% 
+  ggplot() +
+  aes(x = reorder(dest_name, count), y = count) +
+  geom_col(fill = "#999999", alpha = 0.8) +
+  labs(
+    x = "destination",
+    y = "number of flights per year",
+    title = "Destinations from Newark Int."
+  ) +
+  theme_bw() +
+  coord_flip()
 ```
 
 # Which destinations suffer from the longest delays?
 
 ```{r}
-
+flights_dt %>%
+  drop_na(dest_name) %>% 
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  group_by(dest, dest_name) %>% 
+  summarise(mean_delay = mean(dep_delay, na.rm = TRUE), .groups = "drop") %>% 
+  arrange(desc(mean_delay)) %>% 
+  head(10) %>% 
+  ggplot() +
+  aes(x = reorder(dest_name, mean_delay), y = mean_delay) +
+  geom_col(fill = "#999999", alpha = 0.8) +
+  labs(
+    x = "destination",
+    y = "mean delay (minutes)",
+    title = "Destinations with longest delays"
+  ) +
+  theme_bw() +
+  coord_flip()
 ```
 
 # Trend weather conditions against mean departure delays
@@ -191,7 +246,7 @@ flights_dt %>%
 ```{r}
 flights_dt %>% 
   filter(dep_delay > 0 & origin == "EWR") %>% 
-  group_by(month = floor_date(sched_dep_time, "day"), origin) %>% 
+  group_by(day = floor_date(sched_dep_time, "day"), origin) %>% 
   summarise(mean_visibility = mean(visib, na.rm = TRUE),
             mean_delay = mean(dep_delay), .groups = "drop") %>% 
   ggplot() +
@@ -228,24 +283,6 @@ flights_dt %>%
 flights_dt %>% 
   filter(dep_delay > 0 & origin == "EWR") %>% 
   group_by(day = floor_date(sched_dep_time, "day"), origin) %>% 
-  summarise(mean_wind_gust = mean(wind_gust, na.rm = TRUE),
-            mean_delay = mean(dep_delay)) %>% 
-  ggplot() +
-  aes(x = mean_wind_gust, y = mean_delay) +
-  geom_point(alpha = 0.7) +
-  geom_smooth(method = "lm", se = FALSE) +
-  labs(
-    x = "mean wind gust (mph)",
-    y = "mean departure delay (minutes)",
-    title = "Mean departure delay by wind gust"
-  ) +
-  theme_bw()
-```
-
-```{r}
-flights_dt %>% 
-  filter(dep_delay > 0 & origin == "EWR") %>% 
-  group_by(day = floor_date(sched_dep_time, "day"), origin) %>% 
   summarise(mean_wind_dir = mean(wind_dir, na.rm = TRUE),
             mean_delay = mean(dep_delay)) %>% 
   ggplot() +
@@ -262,8 +299,7 @@ flights_dt %>%
 
 ```{r}
 flights_dt %>%
-  filter(!is.na(humid),
-         dep_delay > 0 & origin == "EWR") %>% 
+  filter(dep_delay > 0 & origin == "EWR") %>% 
   group_by(day = floor_date(sched_dep_time, "day"), origin) %>% 
   summarise(mean_humidity = mean(humid, na.rm = TRUE),
             mean_delay = mean(dep_delay)) %>% 
@@ -281,8 +317,7 @@ flights_dt %>%
 
 ```{r}
 flights_dt %>% 
-  filter(!is.na(temp),
-         dep_delay > 0 & origin == "EWR") %>% 
+  filter(dep_delay > 0 & origin == "EWR") %>% 
   group_by(day = floor_date(sched_dep_time, "day"), origin) %>% 
   summarise(mean_temp = mean(temp, na.rm = TRUE),
             mean_delay = mean(dep_delay)) %>% 
@@ -300,8 +335,7 @@ flights_dt %>%
 
 ```{r}
 flights_dt %>% 
-  filter(!is.na(dewp),
-         dep_delay > 0 & origin == "EWR") %>% 
+  filter(dep_delay > 0 & origin == "EWR") %>% 
   group_by(day = floor_date(sched_dep_time, "day"), origin) %>% 
   summarise(mean_dewpoint = mean(dewp, na.rm = TRUE),
             mean_delay = mean(dep_delay)) %>% 
@@ -319,8 +353,7 @@ flights_dt %>%
 
 ```{r}
 flights_dt %>% 
-  filter(!is.na(precip),
-         dep_delay > 0 & origin == "EWR") %>% 
+  filter(dep_delay > 0 & origin == "EWR") %>% 
   group_by(day = floor_date(sched_dep_time, "day"), origin) %>% 
   summarise(mean_precip = mean(precip, na.rm = TRUE),
             mean_delay = mean(dep_delay)) %>% 
@@ -338,8 +371,7 @@ flights_dt %>%
 
 ```{r}
 flights_dt %>%
-  filter(!is.na(pressure),
-         dep_delay > 0 & origin == "EWR") %>% 
+  filter(dep_delay > 0 & origin == "EWR") %>% 
   group_by(day = floor_date(sched_dep_time, "day"), origin) %>% 
   summarise(mean_pressure = mean(pressure, na.rm = TRUE),
             mean_delay = mean(dep_delay)) %>% 
@@ -354,28 +386,71 @@ flights_dt %>%
   ) +
   theme_bw()
 ```
-# Corrpliot
+
+# Corrplot
 
 ```{r}
-flights_clean <- flights_dt %>% 
+# subset the flights dataset so as to drop NAs, filter on only departure delays (no early departures) and only for Newark Int.
+flights_weather <- flights_dt %>% 
   na.omit() %>% 
-  filter(dep_delay > 0 & origin == "EWR") 
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  select(dep_delay, temp, dewp, humid, wind_dir, wind_speed, precip, pressure, visib)
 
-fl <- flights_clean[sapply(flights_clean,is.numeric)]
-
-corrplot(cor(flights_clean), order = "hclust", addrect = 2)
+# create correlation matrix
+cor_matrix <- cor(flights_weather)
+corrplot(cor_matrix, type = "upper", col = cbPalette,
+         tl.col = "black", method = "number")
 ```
 
+# ggpairs
+
 ```{r}
-model <- lm(dep_delay ~ ., data = fl)
+ggpairs(flights_weather)
+```
 
-alias(lm(dep_delay ~ ., data = fl))
+# Subset flights
 
+```{r}
+flights_numerical_all <- flights_dt %>%
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  na.omit() %>% 
+  select_if(., is.numeric) %>%  # select all numeric variables
+  select(-arr_delay)
+  
+flights_numerical_all
+```
+
+# Simple linear regression
+
+```{r}
+# build a simple linear regression model using dep_delay and the weather variables
+model <- lm(dep_delay ~ ., data = flights_weather)
+
+# view results 
 summary(model)
 ```
 
 ```{r}
-model_scale <- lm(dep_delay ~ dewp + temp, data = flights_clean)
-summary(model_scale)
+model <- lm(dep_delay ~ ., data = flights_numerical_all)
+summary(model)
+```
+
+# glmulti
+
+```{r}
+glmulti_fit <- glmulti(
+  dep_delay ~ ., 
+  data = flights_weather,
+  level = 2, # 2 = include pairwise interactions, 1 = main effects only (main effect = no pairwise interactions)
+  minsize = 0, # no min size of model
+  maxsize = -1, # -1 = no max size of model
+  marginality = TRUE, # marginality here means the same as 'strongly hierarchical' interactions, i.e. include pairwise interactions only if both predictors present in the model as main effects.
+  method = "g", # the problem is too large for exhaustive search, so search using a genetic algorithm
+  crit = bic, # criteria for model selection is BIC value (lower is better)
+  plotty = FALSE, # don't plot models as function runs
+  report = TRUE, # do produce reports as function runs
+  confsetsize = 10, # return best 100 solutions
+  fitfunction = lm # fit using the `lm` function
+)
 ```
 
