@@ -536,7 +536,7 @@ flights_decision_tree <- flights_dt %>%
   mutate(engines = factor(engines),
          engine = factor(engine),
          month = month(sched_dep_time, label = TRUE),
-         late_departure = as.factor(ifelse(dep_delay > 0, "Late", "Ontime/Early"))) %>%
+         late_departure = factor(ifelse(dep_delay > 0, "Late", "Ontime/Early"))) %>%
   mutate(season = factor(case_when(
     month %in% c("Dec", "Jan", "Feb") ~ "Winter",
     month %in% c("Mar", "Apr", "May") ~ "Spring",
@@ -597,5 +597,32 @@ conf_mat
 
 ```{r}
 confusionMatrix(flights_test_pred$pred, flights_test_pred$late_departure)
+```
+
+# Random forest
+
+```{r}
+rf_classifier <- ranger(late_departure ~ ., 
+                        data = flights_train, 
+                        importance = "impurity", 
+                        num.trees = 1000, 
+                        mtry = 2, 
+                        min.node.size = 5)
+rf_classifier
+```
+
+```{r}
+importance(rf_classifier)
+```
+
+```{r}
+flights_test_pred <- flights_test %>%
+  mutate(pred = predict(rf_classifier, data = flights_test)$predictions)
+
+confusionMatrix(flights_test_pred$pred, flights_test_pred$late_departure)
+```
+
+```{r}
+importance(flights_test_pred)
 ```
 
