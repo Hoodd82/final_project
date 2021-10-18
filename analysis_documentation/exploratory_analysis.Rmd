@@ -24,7 +24,9 @@ pacman::p_load(
   corrplot,
   leaps,
   glmulti,
-  broom
+  broom,
+  rpart,
+  rpart.plot
 )
 ```
 
@@ -98,7 +100,8 @@ flights_dt %>%
 
 ```{r}
 flights_dt %>%
-  group_by(month = floor_date(sched_dep_time, "month"), origin) %>% 
+  mutate(month = month(sched_dep_time, label = TRUE)) %>% 
+  group_by(month, origin) %>% 
   summarise(no_of_flights = n(), .groups = "drop") %>% 
   ggplot() +
   aes(x = month, y = no_of_flights, fill = origin) +
@@ -188,8 +191,8 @@ flights_dt %>%
   summarise(mean_delay = mean(dep_delay, na.rm = TRUE), .groups = "drop") %>% 
   ggplot() +
   aes(x = hour, y = mean_delay) +
-  geom_point(alpha = 0.8) +
-  geom_smooth(se = FALSE) +
+  geom_point(alpha = 0.8, colour = "#56B4E9") +
+  geom_smooth(se = FALSE, colour = "#E69F00") +
   labs(
     x = "hour",
     y = "mean delay (minutes)",
@@ -198,6 +201,26 @@ flights_dt %>%
   theme_bw() +
   scale_x_continuous(limits = c(5, 23), breaks = seq(5, 23, by = 1))
 ```
+
+# Which day is the best day to travel from Newark Int.?
+
+```{r}
+flights_dt %>%
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  mutate(weekday = wday(sched_dep_time, label = TRUE)) %>% 
+  group_by(weekday) %>% 
+  summarise(mean_delay = mean(dep_delay)) %>% 
+  ggplot() +
+  aes(x = weekday, y = mean_delay) +
+    geom_col(fill = "#999999", alpha = 0.8) +
+  labs(
+    x = "weekday",
+    y = "mean departure delay (minutes)",
+    title = "Departure delay by weekday"
+  ) +
+  theme_bw()
+```
+
 # Which are the most popular destinations from Newark Int?
 
 ```{r}
@@ -252,7 +275,7 @@ flights_dt %>%
   ggplot() +
   aes(x = mean_visibility, y = mean_delay) +
   geom_point(alpha = 0.7) +
-  geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(method = "lm", se = FALSE, colour = "#E69F00") +
   labs(
     x = "mean visibility (miles)",
     y = "mean departure delay (minutes)",
@@ -270,7 +293,7 @@ flights_dt %>%
   ggplot() +
   aes(x = mean_wind_speed, y = mean_delay) +
   geom_point(alpha = 0.7) +
-  geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(method = "lm", se = FALSE, colour = "#E69F00") +
   labs(
     x = "mean wind speed (mph)",
     y = "mean departure delay (minutes)",
@@ -288,7 +311,7 @@ flights_dt %>%
   ggplot() +
   aes(x = mean_wind_dir, y = mean_delay) +
   geom_point(alpha = 0.7) +
-  geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(method = "lm", se = FALSE, colour = "#E69F00") +
   labs(
     x = "mean wind direction (degrees)",
     y = "mean departure delay (minutes)",
@@ -306,7 +329,7 @@ flights_dt %>%
   ggplot() +
   aes(x = mean_humidity, y = mean_delay) +
   geom_point(alpha = 0.7) +
-  geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(method = "lm", se = FALSE, colour = "#E69F00") +
   labs(
     x = "mean humidity (%)",
     y = "mean departure delay (minutes)",
@@ -324,7 +347,7 @@ flights_dt %>%
   ggplot() +
   aes(x = mean_temp, y = mean_delay) +
   geom_point(alpha = 0.7) +
-  geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(method = "lm", se = FALSE, colour = "#E69F00") +
   labs(
     x = "mean temperature (degf)",
     y = "mean departure delay (minutes)",
@@ -342,7 +365,7 @@ flights_dt %>%
   ggplot() +
   aes(x = mean_dewpoint, y = mean_delay) +
   geom_point(alpha = 0.7) +
-  geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(method = "lm", se = FALSE, colour = "#E69F00") +
   labs(
     x = "mean dewpoint (degF)",
     y = "mean departure delay (minutes)",
@@ -360,7 +383,7 @@ flights_dt %>%
   ggplot() +
   aes(x = mean_precip, y = mean_delay) +
   geom_point(alpha = 0.7) +
-  geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(method = "lm", se = FALSE, colour = "#E69F00") +
   labs(
     x = "mean precipitation (inches)",
     y = "mean departure delay (minutes)",
@@ -378,7 +401,7 @@ flights_dt %>%
   ggplot() +
   aes(x = mean_pressure, y = mean_delay) +
   geom_point(alpha = 0.7) +
-  geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(method = "lm", se = FALSE, colour = "#E69F00") +
   labs(
     x = "mean pressure (mbar)",
     y = "mean departure delay (minutes)",
@@ -408,31 +431,83 @@ corrplot(cor_matrix, type = "upper", col = cbPalette,
 ggpairs(flights_weather)
 ```
 
-# Subset flights
+# Linear regression modeling
 
 ```{r}
-flights_numerical_all <- flights_dt %>%
-  filter(dep_delay > 0 & origin == "EWR") %>% 
+model_1_dt <- flights_dt %>% 
   na.omit() %>% 
-  select_if(., is.numeric) %>%  # select all numeric variables
-  select(-arr_delay)
-  
-flights_numerical_all
-```
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  select(dep_delay, temp, dewp, humid, wind_dir, wind_speed, precip, pressure, visib)
 
-# Simple linear regression
-
-```{r}
-# build a simple linear regression model using dep_delay and the weather variables
-model <- lm(dep_delay ~ ., data = flights_weather)
+model_1 <- lm(dep_delay ~ ., data = model_1_dt)
 
 # view results 
-summary(model)
+summary(model_1)
 ```
 
 ```{r}
-model <- lm(dep_delay ~ ., data = flights_numerical_all)
-summary(model)
+model_2_dt <- flights_dt %>%
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  na.omit() %>% 
+  select_if(., is.numeric) %>% 
+  select(-c(arr_delay, engines, seats, lat, lon, wind_dir, year, temp, precip, minute, distance, visib, flight))
+
+model_2 <- lm(dep_delay ~ ., data = model_2_dt)
+summary(model_2)
+```
+
+# Relationship between weather variables
+
+```{r}
+flights_dt %>%
+  na.omit() %>% 
+  ggplot() +
+  aes(x = humid, y = dewp) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+flights_dt %>%
+  na.omit() %>% 
+  ggplot() +
+  aes(x = humid, y = wind_speed) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+flights_dt %>%
+  na.omit() %>% 
+  ggplot() +
+  aes(x = humid, y = pressure) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+flights_dt %>%
+  na.omit() %>% 
+  ggplot() +
+  aes(x = dewp, y = wind_speed) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+flights_dt %>%
+  na.omit() %>% 
+  ggplot() +
+  aes(x = dewp, y = pressure) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+flights_dt %>%
+  na.omit() %>% 
+  ggplot() +
+  aes(x = wind_speed, y = pressure) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+# Linear regression model with interactions in weather variables
+
+```{r}
+model_3 <- lm(dep_delay ~ air_time + aircraft_age + alt + hour + dewp + wind_speed
+              + pressure + dewp:humid + pressure:dewp, data = model_2_dt)
+summary(model_3)
 ```
 
 # glmulti
@@ -452,5 +527,53 @@ glmulti_fit <- glmulti(
   confsetsize = 10, # return best 100 solutions
   fitfunction = lm # fit using the `lm` function
 )
+```
+
+# Decision Tree
+
+```{r}
+flights_decision_tree <- flights_dt %>%
+  filter(origin == "EWR") %>% 
+  select(dep_delay, air_time, distance, engines, engine, 
+         aircraft_age, lat, lon, alt, hour, temp, precip, humid, visib, pressure,
+         dewp, wind_dir, wind_speed) %>% 
+  mutate(engines = as.factor(engines),
+         late_departure = ifelse(dep_delay > 0, "Late", "Ontime/Early")) %>% 
+  select(-dep_delay)
+
+set.seed(19)
+
+n_data <- nrow(flights_decision_tree)
+# create test sample index
+test_index <- sample(1:n_data, size = n_data * 0.2)
+# create test set
+flights_test <- slice(flights_decision_tree, test_index)
+# create training set
+flights_train <- slice(flights_decision_tree, -test_index)
+```
+
+```{r}
+# check split of the data
+flights_test %>% 
+  janitor::tabyl(late_departure)
+
+flights_train %>% 
+  janitor::tabyl(late_departure)
+```
+
+```{r}
+flights_fit <- rpart(
+  formula = late_departure ~ ., 
+  data = flights_train, 
+  method = 'class'
+)
+
+rpart.plot(flights_fit, 
+           yesno = 2, 
+           fallen.leaves = TRUE, 
+           faclen = 6, 
+           digits = 4, 
+           type = 4, 
+           extra = 101)
 ```
 
