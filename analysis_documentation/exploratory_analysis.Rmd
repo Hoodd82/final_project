@@ -21,14 +21,15 @@ pacman::p_load(
   modelr,
   yardstick,
   caret,
-  ranger
+  ranger,
+  kableExtra
 )
 ```
 
 ```{r, warning=FALSE,message=FALSE}
 flights_dt <- read_csv(here("clean_data/flights_clean.csv"))
 
-cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000")
 
 summary(flights_dt)
 ```
@@ -64,15 +65,34 @@ flights_dt %>%
   geom_point(alpha = 0.8) +
   labs(
     x = "month",
-    y = "mean delay (minutes)",
+    y = "mean departure delay (minutes)",
     title = " Mean delay by month",
     colour = "airport"
   ) +
   scale_colour_manual(values = c("#999999", "#E69F00", "#56B4E9")) +
   theme_bw()
 ```
+# Which months have the highest and lowest mean departure delays?
 
-# What is the number of departure delays over the year?
+```{r}
+# highest mean departure delay by month
+flights_dt %>% 
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  group_by(month = floor_date(sched_dep_time, "month"), origin) %>% 
+  summarise(mean_delay = mean(dep_delay), .groups = "drop") %>% 
+  arrange(desc(mean_delay))
+```
+
+```{r}
+# lowest departure delay by month
+flights_dt %>% 
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  group_by(month = floor_date(sched_dep_time, "month"), origin) %>% 
+  summarise(mean_delay = mean(dep_delay), .groups = "drop") %>% 
+  arrange(mean_delay)
+```
+
+# What is the number of delayed flights over the year?
 
 ```{r}
 flights_dt %>%
@@ -86,10 +106,110 @@ flights_dt %>%
   labs(
     x = "month",
     y = "number of delays",
-    title = " Monthly trend of departure delays",
+    title = "Number of delayed flights by month",
     colour = "airport"
   ) +
   scale_colour_manual(values = c("#999999", "#E69F00", "#56B4E9")) +
+  theme_bw()
+```
+# Which month has the highest number of delays?
+
+```{r}
+flights_dt %>%
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  group_by(month = floor_date(sched_dep_time, "month"), origin) %>% 
+  summarise(no_of_delays = n(), .groups = "drop") %>% 
+  arrange(desc(no_of_delays))
+```
+
+# What were the weather conditions during these months?
+
+```{r}
+flights_dt %>% 
+  mutate(date = as.Date(dep_time, label = TRUE),
+         month = month(dep_time, label = TRUE)) %>% 
+  filter(dep_delay > 0 & origin == "EWR" & month == "Dec") %>%
+  select(date, month, pressure, precip, temp, wind_speed, wind_dir, dewp, visib, humid) %>% 
+  group_by(date) %>% 
+  summarise(
+    mean_pressure = mean(pressure, na.rm = TRUE),
+    mean_precip = mean(precip, na.rm = TRUE),
+    mean_temp = mean(temp, na.rm = TRUE),
+    mean_wind_speed = mean(wind_speed, na.rm = TRUE),
+    mean_wind_dir = mean(wind_dir, na.rm = TRUE),
+    mean_dewp = mean(dewp, na.rm = TRUE),
+    mean_visib = mean(visib, na.rm = TRUE),
+    mean_humid = mean(humid, na.rm = TRUE)
+  ) %>% 
+  pivot_longer(
+    cols = mean_pressure:mean_humid,
+    names_to = "variable",
+    values_to = "value"
+  ) %>% 
+  ggplot() +
+  aes(x = date, y = value, colour = variable) +
+  geom_line() +
+  scale_colour_manual(values = cbPalette) +
+  theme_bw()
+```
+
+```{r}
+flights_dt %>% 
+  mutate(date = as.Date(dep_time, label = TRUE),
+         month = month(dep_time, label = TRUE)) %>% 
+  filter(dep_delay > 0 & origin == "EWR" & month == "Dec") %>%
+  select(date, dep_delay, month, pressure, precip, temp, wind_speed, wind_dir, dewp, visib, humid) %>% 
+  group_by(date) %>% 
+  summarise(
+    departure_delay = mean(dep_delay),
+    pressure = mean(pressure),
+    precipitation = mean(precip),
+    temperature = mean(temp),
+    wind_speed = mean(wind_speed),
+    wind_direction = mean(wind_dir),
+    dewpoint = mean(dewp),
+    visibility = mean(visib),
+    humidity = mean(humid)
+  ) %>% 
+  na.omit() %>% 
+  kable(align = "c") %>%
+  kable_styling(full_width = FALSE) %>% 
+  column_spec(1:10, color = "black")
+```  
+
+```{r}
+flights_dt %>% 
+  mutate(date = as.Date(dep_time, label = TRUE),
+         month = month(dep_time, label = TRUE)) %>% 
+  filter(dep_delay > 0 & origin == "EWR" & month == "Dec") %>%
+  select(date, dep_delay, month, pressure, precip, temp, wind_speed, wind_dir, dewp, visib, humid) %>% 
+  group_by(date) %>% 
+  summarise(
+    departure_delay = scale(dep_delay),
+    pressure = scale(pressure),
+    precipitation = scale(precip),
+    temperature = scale(temp),
+    wind_speed = scale(wind_speed),
+    wind_direction = scale(wind_dir),
+    dewpoint = scale(dewp),
+    visibility = scale(visib),
+    humidity = scale(humid)
+  ) %>% 
+  na.omit() %>% 
+  pivot_longer(
+    cols = departure_delay:humidity,
+    names_to = "variable",
+    values_to = "value"
+  ) %>% 
+  ggplot() +
+  aes(x = date, y = value, colour = variable) +
+  geom_point(alpha = 0.8) +
+  scale_colour_manual(values = cbPalette) +
+  scale_x_date(labels = date_format("%d"), breaks = date_breaks("day")) +
+  labs(
+    colour = "",
+    title = "Weather variables December"
+  ) +
   theme_bw()
 ```
 

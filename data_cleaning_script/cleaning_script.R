@@ -8,8 +8,9 @@ pacman::p_load(
   nycflights13
 )
 
-
 # datasets ----------------------------------------------------------------
+
+# there are too many NAs in the provided weather.csv file, therefore it was decided that the nycflights13 dataset built into the tidyverse library would be used
 
 airports <- airports
 airlines <- airlines
@@ -57,12 +58,12 @@ flights <- flights %>%
   ), .after = "origin") %>% # create origin_name for airport names, easier to do this rather than performing an additional join
   select(-c(year, month, day))  # drop variables which are not required
 
-# first_join --------------------------------------------------------------
+# first_joins -------------------------------------------------------------
 
 flights <- flights %>% 
-  left_join(airlines, by = "carrier") %>% # join with airline dataset
-  left_join(aircraft, by = "tailnum") %>% # join with aircraft dataset
-  left_join(airports, by = c("dest" = "faa")) # join with the airport dataset
+  left_join(airlines, by = "carrier") %>% 
+  left_join(aircraft, by = "tailnum") %>% 
+  left_join(airports, by = c("dest" = "faa"))
 
 # flights_weather_join ----------------------------------------------------
 
@@ -101,18 +102,13 @@ flights_weather_join_fn(flights, weather)
 
 # final_clean -------------------------------------------------------------
 
-# calculate percentage of missing data and drop these variables
-map(flights, ~mean(is.na(.)))
-
 # final round of cleaning on the joined dataset
 
 flights <- flights %>%
   select(-c(origin.y, wind_gust, speed)) %>% # drop duplicates & variables with lots of missing data
   rename("origin" = "origin.x", "carrier_name" = "name.x", 
-         "dest_name" = "name.y") %>% 
-  relocate(dep_time:dep_delay, origin, origin_name, arr_time:arr_delay, dest, 
-           dest_name, air_time, distance, flight, carrier, carrier_name,
-           tailnum, manufacturer:aircraft_age, lat:alt, time_hour, wind_dir:humid)
+         "dest_name" = "name.y")
+
 # write_to_csv ------------------------------------------------------------
 
 write_csv(flights, here("clean_data/flights_clean.csv"))
