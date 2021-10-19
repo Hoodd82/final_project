@@ -1,0 +1,143 @@
+---
+title: "Modeling"
+output: html_notebook
+---
+
+```{r, warning=FALSE,message=FALSE}
+pacman::p_load(
+  tidyverse,
+  here,
+  RColorBrewer,
+  lubridate,
+  scales,
+  GGally,
+  stats,
+  corrplot,
+  leaps,
+  glmulti,
+  broom,
+  rpart,
+  rpart.plot,
+  modelr,
+  yardstick,
+  caret,
+  ranger
+)
+```
+
+```{r, warning=FALSE,message=FALSE}
+flights_dt <- read_csv(here("clean_data/flights_clean.csv"))
+
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+```
+
+# Corrplot
+
+```{r}
+# subset the flights dataset so as to drop NAs, filter on only departure delays (no early departures) and only for Newark Int.
+flights_weather <- flights_dt %>% 
+  na.omit() %>% 
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  select(dep_delay, temp, dewp, humid, wind_dir, wind_speed, precip, pressure, visib)
+
+# create correlation matrix
+cor_matrix <- cor(flights_weather)
+corrplot(cor_matrix, type = "upper", col = cbPalette,
+         tl.col = "black", method = "number")
+```
+
+# ggpairs
+
+```{r}
+ggpairs(flights_weather)
+```
+
+# Linear regression modeling
+
+```{r}
+model_1_dt <- flights_dt %>% 
+  na.omit() %>% 
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  select(dep_delay, temp, dewp, humid, wind_dir, wind_speed, precip, pressure, visib)
+model_1 <- lm(dep_delay ~ ., data = model_1_dt)
+summary(model_1)
+```
+
+```{r}
+model_2_dt <- flights_dt %>%
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  na.omit() %>% 
+  select_if(., is.numeric) %>% 
+  select(-c(arr_delay, engines, seats, lat, lon, wind_dir, year, precip, minute, distance, flight))
+
+model_2 <- lm(dep_delay ~ ., data = model_2_dt)
+summary(model_2)
+```
+
+# Relationship between weather variables
+
+```{r}
+flights_dt %>%
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  na.omit() %>% 
+  ggplot() +
+  aes(x = humid, y = dewp) +
+  geom_point()
+
+flights_dt %>%
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  na.omit() %>% 
+  ggplot() +
+  aes(x = temp, y = dewp) +
+  geom_point()
+
+flights_dt %>%
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  na.omit() %>% 
+  ggplot() +
+  aes(x = visib, y = humid) +
+  geom_point()
+
+flights_dt %>%
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  na.omit() %>% 
+  ggplot() +
+  aes(x = dewp, y = pressure) +
+  geom_point()
+
+flights_dt %>%
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  na.omit() %>% 
+  ggplot() +
+  aes(x = humid, y = wind_speed) +
+  geom_point()
+```
+
+# Linear regression model with interactions in weather variables
+
+```{r}
+model_3 <- lm(dep_delay ~ air_time + aircraft_age + alt + hour + dewp +
+              pressure + dewp:humid + pressure:dewp + dewp:temp +  
+              wind_speed:humid, 
+              data = model_2_dt)
+summary(model_3)
+```
+
+# glmulti
+
+```{r}
+glmulti_fit <- glmulti(
+  dep_delay ~ ., 
+  data = flights_weather,
+  level = 2, # 2 = include pairwise interactions, 1 = main effects only (main effect = no pairwise interactions)
+  minsize = 0, # no min size of model
+  maxsize = -1, # -1 = no max size of model
+  marginality = TRUE, # marginality here means the same as 'strongly hierarchical' interactions, i.e. include pairwise interactions only if both predictors present in the model as main effects.
+  method = "g", # the problem is too large for exhaustive search, so search using a genetic algorithm
+  crit = bic, # criteria for model selection is BIC value (lower is better)
+  plotty = FALSE, # don't plot models as function runs
+  report = TRUE, # do produce reports as function runs
+  confsetsize = 10, # return best 100 solutions
+  fitfunction = lm # fit using the `lm` function
+)
+```

@@ -1,0 +1,126 @@
+---
+title: "Decision Tree & Random Forests"
+output: html_notebook
+---
+
+```{r, warning=FALSE,message=FALSE}
+pacman::p_load(
+  tidyverse,
+  here,
+  RColorBrewer,
+  lubridate,
+  scales,
+  GGally,
+  stats,
+  corrplot,
+  leaps,
+  glmulti,
+  broom,
+  rpart,
+  rpart.plot,
+  modelr,
+  yardstick,
+  caret,
+  ranger,
+  randomForest
+)
+```
+
+```{r, warning=FALSE,message=FALSE}
+flights_dt <- read_csv(here("clean_data/flights_clean.csv"))
+
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+```
+
+# Decision Tree
+
+```{r}
+flights_decision_tree <- flights_dt %>%
+  filter(origin == "EWR") %>% 
+  select(sched_dep_time, dep_delay, distance, hour, 
+         temp, humid, visib, pressure, dewp, wind_dir, wind_speed) %>% # select only variables of interest
+  mutate(month = month(sched_dep_time, label = TRUE), # create month from which season can be calculated
+         late_departure = factor(ifelse(dep_delay > 0, "Late", "Ontime/Early"))) %>% # late/early variable
+  mutate(season = factor(case_when(
+    month %in% c("Dec", "Jan", "Feb") ~ "Winter",
+    month %in% c("Mar", "Apr", "May") ~ "Spring",
+    month %in% c("Jun", "Jul", "Aug") ~ "Summer",
+    month %in% c("Sep", "Oct", "Nov") ~ "Autumn"
+  ))) %>% # create season variable
+  select(-c(dep_delay, sched_dep_time, month)) %>% # drop redundant variables
+  na.omit() # drop missing values
+
+str(flights_decision_tree)
+dim(flights_decision_tree) # to prevent potential over-fitting the no. of variables will be such that e^Nf < No, where Nf is the no. of variables and No the number of observations
+
+n_data <- nrow(flights_decision_tree)
+# create test sample index
+test_index <- sample(1:n_data, size = n_data * 0.2)
+# create test set
+flights_test <- slice(flights_decision_tree, test_index)
+# create training set
+flights_train <- slice(flights_decision_tree, -test_index)
+```
+
+```{r}
+# check split of the data
+flights_test %>% 
+  janitor::tabyl(late_departure)
+
+flights_train %>% 
+  janitor::tabyl(late_departure)
+```
+
+```{r}
+flights_fit <- rpart(
+  formula = late_departure ~ ., 
+  data = flights_train, 
+  method = 'class'
+)
+
+rpart.plot(flights_fit, 
+           yesno = 2, 
+           fallen.leaves = TRUE, 
+           faclen = 2, 
+           digits = 4)
+```
+
+```{r}
+flights_test_pred <- flights_test %>%
+  add_predictions(flights_fit, type = 'class')
+
+conf_mat <- flights_test_pred %>%
+              conf_mat(truth = late_departure, estimate = pred)
+conf_mat
+```
+
+```{r}
+confusionMatrix(flights_test_pred$pred, flights_test_pred$late_departure)
+```
+
+# Random forest
+
+```{r}
+rf_classifier <- ranger(late_departure ~ ., 
+                        data = flights_train, 
+                        num.trees = 1000, # this value can be adjusted to minimise the OOB error
+                        mtry = 2,
+                        importance = "impurity",
+                        min.node.size = 5)
+rf_classifier
+```
+
+```{r}
+ranger::importance(rf_classifier)
+```
+
+
+```{r}
+flights_test_pred <- flights_test %>%
+  mutate(pred = predict(rf_classifier, data = flights_test)$predictions)
+flights_test_pred
+
+confusionMatrix(flights_test_pred$pred, flights_test_pred$late_departure)
+```
+
+

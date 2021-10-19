@@ -1,16 +1,7 @@
 ---
-title: "Flights Exploratory Analysis"
+title: "Exploratory Analysis"
 output: html_notebook
 ---
-
-The purpose of exploratory analysis is to perform initial investigations on the data so as to discover patterns, identify any anomalies, to test initial hypothesis and check assumptions made at the start of the project. 
-
-In this section of the project we will ask two types of questions: 
-
-1. what type of variation occurs within my variables? 
-2. what type of covariation occurs between my variables? 
-
-Variation being the tendency for values of a variable to change from measurement to measurement, and covariance is the tendency for two or more variables to vary together in a related way.
 
 ```{r, warning=FALSE,message=FALSE}
 pacman::p_load(
@@ -38,6 +29,8 @@ pacman::p_load(
 flights_dt <- read_csv(here("clean_data/flights_clean.csv"))
 
 cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+summary(flights_dt)
 ```
 
 # Which airport in our dataset has the highest number of departures?
@@ -205,6 +198,46 @@ flights_dt %>%
   theme_bw() +
   scale_x_continuous(limits = c(5, 23), breaks = seq(5, 23, by = 1))
 ```
+# How does distance of an outbound flight affect departure delays?
+
+```{r}
+flights_dt %>% 
+  filter(origin == "EWR") %>% 
+  ggplot() +
+  aes(x = distance) +
+  geom_histogram(bins = 50) +
+  theme_bw() +
+  labs(title = "Distribution of flight distance")
+```
+
+```{r}
+positions <- c("<500mi", "500-1000mi", "1000-1500mi", "1500-2000mi", "2000-2500mi", "2500-3000mi",
+               ">3000mi")
+
+flights_dt %>% 
+  filter(dep_delay > 0 & origin == "EWR") %>% 
+  mutate(distance = case_when(
+    distance <= 500 ~ "<500mi",
+    distance > 500 & distance <= 1000 ~ "500-1000mi",
+    distance > 1000 & distance <= 1500 ~ "1000-1500mi",
+    distance > 1500 & distance <= 2000 ~ "1500-2000mi",
+    distance > 2000 & distance <= 2500 ~ "2000-2500mi",
+    distance > 2500 & distance <= 3000 ~ "2500-3000mi",
+    distance > 3000 ~ ">3000mi"
+  )) %>% 
+  group_by(distance) %>% 
+  summarise(mean_delay = mean(dep_delay)) %>% 
+  ggplot() +
+  aes(x = distance, y = mean_delay) +
+  geom_col(fill = "#999999", alpha = 0.8) +
+  labs(
+    x = "distance (miles)",
+    y = "mean departure delay (minutes)",
+    title = "Departure delay by flight distance"
+  ) +
+  scale_x_discrete(limits = positions) +
+  theme_bw()
+```
 
 # Which day is the best day to travel from Newark Int.?
 
@@ -216,7 +249,7 @@ flights_dt %>%
   summarise(mean_delay = mean(dep_delay)) %>% 
   ggplot() +
   aes(x = weekday, y = mean_delay) +
-    geom_col(fill = "#999999", alpha = 0.8) +
+  geom_col(fill = "#999999", alpha = 0.8) +
   labs(
     x = "weekday",
     y = "mean departure delay (minutes)",
@@ -414,215 +447,5 @@ flights_dt %>%
   theme_bw()
 ```
 
-# Corrplot
 
-```{r}
-# subset the flights dataset so as to drop NAs, filter on only departure delays (no early departures) and only for Newark Int.
-flights_weather <- flights_dt %>% 
-  na.omit() %>% 
-  filter(dep_delay > 0 & origin == "EWR") %>% 
-  select(dep_delay, temp, dewp, humid, wind_dir, wind_speed, precip, pressure, visib)
-
-# create correlation matrix
-cor_matrix <- cor(flights_weather)
-corrplot(cor_matrix, type = "upper", col = cbPalette,
-         tl.col = "black", method = "number")
-```
-
-# ggpairs
-
-```{r}
-ggpairs(flights_weather)
-```
-
-# Linear regression modeling
-
-```{r}
-model_1_dt <- flights_dt %>% 
-  na.omit() %>% 
-  filter(dep_delay > 0 & origin == "EWR") %>% 
-  select(dep_delay, temp, dewp, humid, wind_dir, wind_speed, precip, pressure, visib)
-model_1 <- lm(dep_delay ~ ., data = model_1_dt)
-summary(model_1)
-```
-
-```{r}
-model_2_dt <- flights_dt %>%
-  filter(dep_delay > 0 & origin == "EWR") %>% 
-  na.omit() %>% 
-  select_if(., is.numeric) %>% 
-  select(-c(arr_delay, engines, seats, lat, lon, wind_dir, year, precip, minute, distance, flight))
-
-model_2 <- lm(dep_delay ~ ., data = model_2_dt)
-summary(model_2)
-```
-
-# Relationship between weather variables
-
-```{r}
-flights_dt %>%
-  filter(dep_delay > 0 & origin == "EWR") %>% 
-  na.omit() %>% 
-  ggplot() +
-  aes(x = humid, y = dewp) +
-  geom_point()
-
-flights_dt %>%
-  filter(dep_delay > 0 & origin == "EWR") %>% 
-  na.omit() %>% 
-  ggplot() +
-  aes(x = temp, y = dewp) +
-  geom_point()
-
-flights_dt %>%
-  filter(dep_delay > 0 & origin == "EWR") %>% 
-  na.omit() %>% 
-  ggplot() +
-  aes(x = visib, y = humid) +
-  geom_point()
-
-flights_dt %>%
-  filter(dep_delay > 0 & origin == "EWR") %>% 
-  na.omit() %>% 
-  ggplot() +
-  aes(x = dewp, y = pressure) +
-  geom_point()
-
-flights_dt %>%
-  filter(dep_delay > 0 & origin == "EWR") %>% 
-  na.omit() %>% 
-  ggplot() +
-  aes(x = humid, y = wind_speed) +
-  geom_point()
-```
-
-# Linear regression model with interactions in weather variables
-
-```{r}
-model_3 <- lm(dep_delay ~ air_time + aircraft_age + alt + hour + dewp +
-              pressure + dewp:humid + pressure:dewp + dewp:temp +  
-              wind_speed:humid, 
-              data = model_2_dt)
-summary(model_3)
-```
-
-# glmulti
-
-```{r}
-glmulti_fit <- glmulti(
-  dep_delay ~ ., 
-  data = flights_weather,
-  level = 2, # 2 = include pairwise interactions, 1 = main effects only (main effect = no pairwise interactions)
-  minsize = 0, # no min size of model
-  maxsize = -1, # -1 = no max size of model
-  marginality = TRUE, # marginality here means the same as 'strongly hierarchical' interactions, i.e. include pairwise interactions only if both predictors present in the model as main effects.
-  method = "g", # the problem is too large for exhaustive search, so search using a genetic algorithm
-  crit = bic, # criteria for model selection is BIC value (lower is better)
-  plotty = FALSE, # don't plot models as function runs
-  report = TRUE, # do produce reports as function runs
-  confsetsize = 10, # return best 100 solutions
-  fitfunction = lm # fit using the `lm` function
-)
-```
-
-# Decision Tree
-
-```{r}
-flights_decision_tree <- flights_dt %>%
-  filter(origin == "EWR") %>% 
-  select(sched_dep_time, dep_delay, distance, engines, engine, 
-         aircraft_age, lat, lon, alt, hour, temp, precip, humid, visib, pressure,
-         dewp, wind_dir, wind_speed) %>% 
-  mutate(engines = factor(engines),
-         engine = factor(engine),
-         month = month(sched_dep_time, label = TRUE),
-         late_departure = factor(ifelse(dep_delay > 0, "Late", "Ontime/Early"))) %>%
-  mutate(season = factor(case_when(
-    month %in% c("Dec", "Jan", "Feb") ~ "Winter",
-    month %in% c("Mar", "Apr", "May") ~ "Spring",
-    month %in% c("Jun", "Jul", "Aug") ~ "Summer",
-    month %in% c("Sep", "Oct", "Nov") ~ "Autumn"
-  ))) %>% 
-  select(-c(dep_delay, sched_dep_time)) %>% 
-  na.omit()
-
-str(flights_decision_tree)
-
-# set.seed(19)
-
-n_data <- nrow(flights_decision_tree)
-# create test sample index
-test_index <- sample(1:n_data, size = n_data * 0.2)
-# create test set
-flights_test <- slice(flights_decision_tree, test_index)
-# create training set
-flights_train <- slice(flights_decision_tree, -test_index)
-```
-
-```{r}
-# check split of the data
-flights_test %>% 
-  janitor::tabyl(late_departure)
-
-flights_train %>% 
-  janitor::tabyl(late_departure)
-```
-
-```{r}
-flights_fit <- rpart(
-  formula = late_departure ~ ., 
-  data = flights_train, 
-  method = 'class'
-)
-
-rpart.plot(flights_fit, 
-           yesno = 2, 
-           fallen.leaves = TRUE, 
-           faclen = 2, 
-           digits = 4)
-```
-
-```{r}
-flights_test_pred <- flights_test %>%
-  add_predictions(flights_fit, type = 'class')
-
-flights_test_pred
-```
-
-```{r}
-conf_mat <- flights_test_pred %>%
-              conf_mat(truth = late_departure, estimate = pred)
-conf_mat
-```
-
-```{r}
-confusionMatrix(flights_test_pred$pred, flights_test_pred$late_departure)
-```
-
-# Random forest
-
-```{r}
-rf_classifier <- ranger(late_departure ~ ., 
-                        data = flights_train, 
-                        importance = "impurity", 
-                        num.trees = 1000, 
-                        mtry = 2, 
-                        min.node.size = 5)
-rf_classifier
-```
-
-```{r}
-importance(rf_classifier)
-```
-
-```{r}
-flights_test_pred <- flights_test %>%
-  mutate(pred = predict(rf_classifier, data = flights_test)$predictions)
-
-confusionMatrix(flights_test_pred$pred, flights_test_pred$late_departure)
-```
-
-```{r}
-importance(flights_test_pred)
-```
 
