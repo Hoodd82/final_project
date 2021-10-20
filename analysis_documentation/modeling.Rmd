@@ -1,6 +1,8 @@
 ---
 title: "Modeling"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r, warning=FALSE,message=FALSE}
@@ -33,11 +35,15 @@ cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
 
 # Corrplot
 
-```{r}
+Correlation plots can be used to quickly find insights. It is used to investigate the dependence between multiple variables at the same time and to highlight the most correlated variables in a data table.
+
+With respect to the below corrplot, there is very little correlation between the weather variables and dep_delay. There is more correlation between the weather variables - dewpoint & temperature and humidity & visibility, for example.
+
+```{r, warning=FALSE,message=FALSE}
 # subset the flights dataset so as to drop NAs, filter on only departure delays (no early departures) and only for Newark Int.
 flights_weather <- flights_dt %>% 
   na.omit() %>% 
-  filter(dep_delay > 0 & origin == "EWR") %>% 
+  filter(dep_delay >= 15 & origin == "EWR") %>% 
   select(dep_delay, temp, dewp, humid, wind_dir, wind_speed, precip, pressure, visib)
 
 # create correlation matrix
@@ -48,27 +54,39 @@ corrplot(cor_matrix, type = "upper", col = cbPalette,
 
 # ggpairs
 
-```{r}
-ggpairs(flights_weather)
+ggpairs plots a scatter plot. The lower scatter plots for the continuous variables, the diagonal are density plots of the continuous variables, and the sides the histograms and box plots for the combinations between the categorical and the continuous variables.
+
+
+
+```{r, warning=FALSE,message=FALSE}
+flights_rest <- flights_dt %>% 
+    na.omit() %>% 
+  filter(dep_delay >= 15 & origin == "EWR") %>% 
+  select(dep_delay, air_time, distance, engine, seats, aircraft_age, lat, lon,
+         alt, hour) 
+
+ggpairs(flights_rest)
 ```
 
 # Linear regression modeling
 
-```{r}
+First model will be dep_delay and all the weather variables.
+
+```{r, warning=FALSE,message=FALSE}
 model_1_dt <- flights_dt %>% 
   na.omit() %>% 
-  filter(dep_delay > 0 & origin == "EWR") %>% 
+  filter(dep_delay >= 15 & origin == "EWR") %>% 
   select(dep_delay, temp, dewp, humid, wind_dir, wind_speed, precip, pressure, visib)
 model_1 <- lm(dep_delay ~ ., data = model_1_dt)
 summary(model_1)
 ```
 
-```{r}
+```{r, warning=FALSE,message=FALSE}
 model_2_dt <- flights_dt %>%
-  filter(dep_delay > 0 & origin == "EWR") %>% 
+  filter(dep_delay >= 15 & origin == "EWR") %>% 
   na.omit() %>% 
   select_if(., is.numeric) %>% 
-  select(-c(arr_delay, engines, seats, lat, lon, wind_dir, year, precip, minute, distance, flight))
+  select(-c(arr_delay, engines, lat, lon, wind_dir, year, precip, minute, distance, flight))
 
 model_2 <- lm(dep_delay ~ ., data = model_2_dt)
 summary(model_2)
@@ -76,37 +94,37 @@ summary(model_2)
 
 # Relationship between weather variables
 
-```{r}
+```{r, warning=FALSE,message=FALSE}
 flights_dt %>%
-  filter(dep_delay > 0 & origin == "EWR") %>% 
+  filter(dep_delay >= 15 & origin == "EWR") %>% 
   na.omit() %>% 
   ggplot() +
   aes(x = humid, y = dewp) +
   geom_point()
 
 flights_dt %>%
-  filter(dep_delay > 0 & origin == "EWR") %>% 
+  filter(dep_delay >= 15 & origin == "EWR") %>% 
   na.omit() %>% 
   ggplot() +
   aes(x = temp, y = dewp) +
   geom_point()
 
 flights_dt %>%
-  filter(dep_delay > 0 & origin == "EWR") %>% 
+  filter(dep_delay >= 15 & origin == "EWR") %>% 
   na.omit() %>% 
   ggplot() +
   aes(x = visib, y = humid) +
   geom_point()
 
 flights_dt %>%
-  filter(dep_delay > 0 & origin == "EWR") %>% 
+  filter(dep_delay >= 15 & origin == "EWR") %>% 
   na.omit() %>% 
   ggplot() +
   aes(x = dewp, y = pressure) +
   geom_point()
 
 flights_dt %>%
-  filter(dep_delay > 0 & origin == "EWR") %>% 
+  filter(dep_delay >= 15 & origin == "EWR") %>% 
   na.omit() %>% 
   ggplot() +
   aes(x = humid, y = wind_speed) +
@@ -115,17 +133,22 @@ flights_dt %>%
 
 # Linear regression model with interactions in weather variables
 
-```{r}
+```{r, warning=FALSE,message=FALSE}
 model_3 <- lm(dep_delay ~ air_time + aircraft_age + alt + hour + dewp +
               pressure + dewp:humid + pressure:dewp + dewp:temp +  
-              wind_speed:humid, 
+              wind_speed:humid + seats, 
               data = model_2_dt)
 summary(model_3)
 ```
 
+```{r, warning=FALSE,message=FALSE}
+par(mfrow = c(2, 2))
+plot(model_3)
+```
+
 # glmulti
 
-```{r}
+```{r, warning=FALSE,message=FALSE}
 glmulti_fit <- glmulti(
   dep_delay ~ ., 
   data = flights_weather,
