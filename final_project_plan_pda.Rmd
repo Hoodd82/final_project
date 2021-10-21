@@ -1,12 +1,14 @@
 ---
-title: "Final project documentation - PDA"
+title: "Flight Delays"
 ---
 
 ## Context
 
 #### Business intelligence and data-driven decision making
 
-It was not possible to build a predictive model using multiple linear regression techniques to offer insights into the impact of weather on departure delays. Further work was performed to investigate whether decision trees and random forest would reveal information which could be used by the business. It found that flight departure delays were more likely based on the time of day a flight departed and the time of year. This was also evident from the exploratory analysis performed at the start of the project.
+It was not possible to build a predictive model using multiple linear regression techniques to offer insights into the impact of weather on departure delays. 
+
+Further work was performed to investigate whether decision trees and random forests would reveal information which could be used by the business. It found that flight departure delays were more likely based on the time of day a flight departed and the time of year, which was also evident from the exploratory analysis.
 
 #### Domain knowledge and the business context
 
@@ -14,7 +16,9 @@ I was hired by Newark International Airport to investigate the effect of weather
 
 The business believes that poor weather conditions are causing too many delays and want to invest in improving facilities, so that aircraft can take off in more types of weather. However, they do not fully understand how serious weather related delays are, and are not sure what type of weather they should be most concerned about. As part of investigating the effect of weather, other factors were explored to understand how important weather is in comparison to them.
 
-Newark Airport also want to understand how they compare to other New York airports.
+For context, the Federal Aviation Administration (FAA), which is the transportation authority for civil aviation in the United States, consider a flight to be delayed when it is 15 minutes later than its scheduled arrival or departure time.
+
+In 2019, the FAA estimated the annual cost of flight delays in the United States to be $33 billion.
 
 ## Data
 
@@ -103,13 +107,15 @@ All data used in the project was in the form of .csv files.
 
 #### Data quality and bias
 
-The data provided related only to flights flying internally within the United States. It would not therefore be possible to draw any conclusions from the project findings regarding international flights. 
+The data provided related only to flights flying internally within the United States. It would not therefore be possible to draw any conclusions from the project findings regarding international flights from the United States.
 
 ## Ethics
 
 #### Ethical issues in data sourcing and extraction
 
-Technically the data used for this project does not fall within the scope of GDPR as it relates to flights taken internally within the United States, who do not have a federal privacy laws like GDPR. Additionally, there is no information relating to passengers, only the movement of flights.
+Technically the data used for this project does not fall within the scope of GDPR as it relates to flights taken internally within the United States, who do not have a federal privacy laws like GDPR. 
+
+Additionally, there is no information relating to passengers, only the movement of flights.
 
 #### Ethical implications of business requirements
 
@@ -119,8 +125,8 @@ There are no ethical implications of the business requirements, which is to impr
 
 #### Stages in the data analysis process
 
-- Understand the scope of the project and the problem.
-- Data cleaning
+- Understand the scope of the project and the problem
+- Data cleaning and transformation
 - Exploratory data analysis
 - Model building
 - Reporting
@@ -132,5 +138,5 @@ This project was carried out entirely using R.
 #### Descriptive, diagnostic, predictive and prescriptive analysis
 
 - Linear regression: Linear regression is predictive analysis method which is a way of predicting future events between a dependent variable, in this case departure delays, and independent or predictor variables.
-- Decision trees & random forests: Decisions trees and random forests are both predictive modeling methods.
+- Decision trees & random forests: Decisions trees and random forests are both predictive modelling methods.
 
