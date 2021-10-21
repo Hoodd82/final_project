@@ -56,8 +56,6 @@ corrplot(cor_matrix, type = "upper", col = cbPalette,
 
 ggpairs plots a scatter plot. The lower scatter plots for the continuous variables, the diagonal are density plots of the continuous variables, and the sides the histograms and box plots for the combinations between the categorical and the continuous variables.
 
-
-
 ```{r, warning=FALSE,message=FALSE}
 flights_rest <- flights_dt %>% 
     na.omit() %>% 
@@ -86,7 +84,8 @@ model_2_dt <- flights_dt %>%
   filter(dep_delay >= 15 & origin == "EWR") %>% 
   na.omit() %>% 
   select_if(., is.numeric) %>% 
-  select(-c(arr_delay, engines, lat, lon, wind_dir, year, precip, minute, distance, flight))
+  select(-c(arr_delay, engines, lat, lon, year, precip, minute, distance, flight,
+            visib, precip, dewp, temp))
 
 model_2 <- lm(dep_delay ~ ., data = model_2_dt)
 summary(model_2)
@@ -134,10 +133,16 @@ flights_dt %>%
 # Linear regression model with interactions in weather variables
 
 ```{r, warning=FALSE,message=FALSE}
-model_3 <- lm(dep_delay ~ air_time + aircraft_age + alt + hour + dewp +
+model_3_dt <- flights_dt %>%
+  filter(dep_delay >= 15 & origin == "EWR") %>% 
+  na.omit() %>% 
+  select_if(., is.numeric) %>% 
+  select(-c(arr_delay, engines, lat, lon, year, precip, minute, distance, flight))
+
+model_3 <- lm(dep_delay ~ aircraft_age + hour + dewp + wind_dir +
               pressure + dewp:humid + pressure:dewp + dewp:temp +  
               wind_speed:humid + seats, 
-              data = model_2_dt)
+              data = model_3_dt)
 summary(model_3)
 ```
 
@@ -151,7 +156,7 @@ plot(model_3)
 ```{r, warning=FALSE,message=FALSE}
 glmulti_fit <- glmulti(
   dep_delay ~ ., 
-  data = flights_weather,
+  data = model_1_dt,
   level = 2, # 2 = include pairwise interactions, 1 = main effects only (main effect = no pairwise interactions)
   minsize = 0, # no min size of model
   maxsize = -1, # -1 = no max size of model

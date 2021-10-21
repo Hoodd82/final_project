@@ -1,0 +1,269 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{lmodern}
+\usepackage{ifxetex,ifluatex}
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  pdftitle={Final project documentation - PDA},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifluatex
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+
+\title{Final project documentation - PDA}
+\author{}
+\date{\vspace{-2.5em}}
+
+\begin{document}
+\maketitle
+
+{
+\setcounter{tocdepth}{2}
+\tableofcontents
+}
+\hypertarget{general}{%
+\section{General}\label{general}}
+
+\hypertarget{data-requirements}{%
+\subsubsection{Data Requirements}\label{data-requirements}}
+
+The data you use in the project has to meet the following criteria:
+
+\begin{itemize}
+\tightlist
+\item
+  At least 5,000 rows
+\item
+  At least 3 sources of data
+\item
+  Must contain text data, numeric data and dates
+\end{itemize}
+
+Most of the data supplied with the briefs do meet the requirements, but
+we recommend that you personally make sure that you are indeed meeting
+these criteria. If your current datasets do not, you are more than
+welcome to supplement your analysis with further datasets that would
+help you meet the requirements.
+
+\hypertarget{product-requirements}{%
+\subsubsection{Product Requirements}\label{product-requirements}}
+
+Your actual final project analysis process will remain largely the same
+regardless if you are completing the PDA or not. However, you will need
+to do a bit more formal planning/documentation of your project for the
+PDA.
+
+Please create a project plan/documentation according to the template
+below:
+
+\hypertarget{template}{%
+\section{Template}\label{template}}
+
+Use this template with associated subheadings to create the
+documentation to make sure you cover all necessary learning outcomes for
+the PDA. If you have any questions, just let an instructor know.
+
+\hypertarget{context}{%
+\subsection{Context}\label{context}}
+
+\hypertarget{business-intelligence-and-data-driven-decision-making}{%
+\paragraph{Business intelligence and data-driven decision
+making}\label{business-intelligence-and-data-driven-decision-making}}
+
+What insights can the business/organisation gain from your analysis and
+how will your analysis help the business/organisation make better
+decisions?
+
+\hypertarget{domain-knowledge-and-the-business-context}{%
+\paragraph{Domain knowledge and the business
+context}\label{domain-knowledge-and-the-business-context}}
+
+I was hired by Newark International Airport to investigate the effect of
+weather on flight departure delays.
+
+The business believes that poor weather conditions are causing too many
+delays and want to invest in improving facilities, so that aircraft can
+take off in more types of weather. However, they do not fully understand
+how serious weather related delays are, and are not sure what type of
+weather they should be most concerned about. As part of investigating
+the effect of weather, other factors were explored to understand how
+important weather is in comparison to them.
+
+Newark Airport also want to understand how they compare to other New
+York airports.
+
+\hypertarget{data}{%
+\subsection{Data}\label{data}}
+
+\hypertarget{internal-and-external-data-sources}{%
+\paragraph{Internal and external data
+sources}\label{internal-and-external-data-sources}}
+
+The data received was entirely sourced from the business, no external
+data sources were used in the project.
+
+\hypertarget{types-of-data}{%
+\paragraph{Types of data}\label{types-of-data}}
+
+planes.csv: tailnum - character year - integer type - character
+manufacturer - character model - character engines - integer seats -
+integer speed - integer engine - character
+
+airports.csv: faa - character name - character lat - numeric lon -
+numeric alt - numeric tz - numeric dst - character tzone - character
+
+airlines.csv: carrier - character name - character
+
+flights.csv: year - integer month - integer day - integer dep\_time -
+integer sched\_dep\_time - integer dep\_delay - numeric arr\_time -
+integer sched\_arr\_time - integer arr\_delay - numeric carrier -
+character flight - integer tailnum - character origin - character dest -
+character air\_time - numeric distance - numeric hour - numeric minute -
+numeric time\_hour - POSIXct / POSIXt
+
+weather: origin - character year - integer month - integer day - integer
+hour - integer temp - numeric dewp - numeric humid - numeric wind\_dir -
+numeric wind\_speed - numeric wind\_gust - numeric pressure - numeric
+visib - numeric time\_hour - POSIXct / POSIXt
+
+\hypertarget{data-formats}{%
+\paragraph{Data formats}\label{data-formats}}
+
+All data used in the project was in the form of .csv files.
+
+\begin{itemize}
+\tightlist
+\item
+  aircraft.csv
+\item
+  airlines.csv
+\item
+  flights.csv
+\item
+  planes.csv
+\item
+  weather.csv
+\end{itemize}
+
+\hypertarget{data-quality-and-bias}{%
+\paragraph{Data quality and bias}\label{data-quality-and-bias}}
+
+The data provided related only to flights flying internally within the
+United States. It would not therefore be possible to draw any
+conclusions from the project findings regarding international flights.
+
+\hypertarget{ethics}{%
+\subsection{Ethics}\label{ethics}}
+
+\hypertarget{ethical-issues-in-data-sourcing-and-extraction}{%
+\paragraph{Ethical issues in data sourcing and
+extraction}\label{ethical-issues-in-data-sourcing-and-extraction}}
+
+Technically the data used for this project does not fall within the
+scope of GDPR as it relates to flights taken internally within the
+United States, who do not have a federal privacy laws like GDPR.
+Additionally, there is no information relating to passengers, only the
+movement of flights.
+
+\hypertarget{ethical-implications-of-business-requirements}{%
+\paragraph{Ethical implications of business
+requirements}\label{ethical-implications-of-business-requirements}}
+
+There are no ethical implications of the business requirements, which is
+to improve the facilities at Newark International Airport.
+
+\hypertarget{analysis}{%
+\subsection{Analysis}\label{analysis}}
+
+\hypertarget{stages-in-the-data-analysis-process}{%
+\paragraph{Stages in the data analysis
+process}\label{stages-in-the-data-analysis-process}}
+
+\begin{itemize}
+\tightlist
+\item
+  Understand the scope of the project and the problem.
+\item
+  Data cleaning
+\item
+  Exploratory data analysis
+\item
+  Model building
+\item
+  Reporting
+\end{itemize}
+
+\hypertarget{tools-for-data-analysis}{%
+\paragraph{Tools for data analysis}\label{tools-for-data-analysis}}
+
+This project was carried out entirely using R.
+
+\hypertarget{descriptive-diagnostic-predictive-and-prescriptive-analysis}{%
+\paragraph{Descriptive, diagnostic, predictive and prescriptive
+analysis}\label{descriptive-diagnostic-predictive-and-prescriptive-analysis}}
+
+\begin{itemize}
+\tightlist
+\item
+  Linear regression: Linear regression is predictive analysis method
+  which is a way of predicting future events between a dependent
+  variable, in this case departure delays, and independent or predictor
+  variables.
+\item
+  Decision trees \& random forests: Decisions trees and random forests
+  are both predictive modeling methods.
+\end{itemize}
+
+\end{document}

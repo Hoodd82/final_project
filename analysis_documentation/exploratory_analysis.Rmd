@@ -112,6 +112,15 @@ flights_dt %>%
   scale_colour_manual(values = c("#999999", "#E69F00", "#56B4E9")) +
   theme_bw()
 ```
+
+```{r}
+flights_dt %>% 
+  mutate(month = month(sched_dep_time, label = TRUE)) %>% 
+  filter(month %in% c("Aug", "Sep") &
+           origin == "EWR" &
+           dep_delay >= 15)
+```
+
 # Which month has the highest number of delays?
 
 ```{r}
